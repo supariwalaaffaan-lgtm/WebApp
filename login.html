@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="status-strip">
+    <span class="status-dot locked" id="statusDot"></span>
+    <span id="statusText">session: locked</span>
+  </div>
+
+  <div class="card">
+    <p class="eyebrow">Welcome back</p>
+    <h1>Log in</h1>
+    <p class="subtitle">Enter your email and password to access your account.</p>
+
+    <div class="message" id="formMessage"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Your password" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="btn-primary" id="submitBtn">Log in</button>
+    </form>
+
+    <p class="footer-link"><a href="reset-password.html">Forgot your password?</a></p>
+    <p class="footer-link">Don't have an account? <a href="signup.html">Sign up</a></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    const form = document.getElementById("loginForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const messageBox = document.getElementById("formMessage");
+
+    function showMessage(text, type) {
+      messageBox.textContent = text;
+      messageBox.className = `message show ${type}`;
+    }
+
+    // If already logged in, skip straight to the dashboard.
+    (async () => {
+      const { data } = await supabaseClient.auth.getSession();
+      if (data.session) {
+        window.location.href = "dashboard.html";
+      }
+    })();
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Logging in...";
+      document.getElementById("statusDot").className = "status-dot pending";
+      document.getElementById("statusText").textContent = "session: authenticating";
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Log in";
+        document.getElementById("statusDot").className = "status-dot locked";
+        document.getElementById("statusText").textContent = "session: locked";
+        showMessage(error.message, "error");
+        return;
+      }
+
+      document.getElementById("statusDot").className = "status-dot open";
+      document.getElementById("statusText").textContent = "session: authenticated";
+      window.location.href = "dashboard.html";
+    });
+  </script>
+</body>
+</html>

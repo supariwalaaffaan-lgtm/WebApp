@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="status-strip">
+    <span class="status-dot open"></span>
+    <span>session: authenticated</span>
+  </div>
+
+  <div class="card dash-card">
+    <p class="eyebrow">Your account</p>
+    <h1>Dashboard</h1>
+    <p class="subtitle">This page only loads for logged-in users. Anyone without a valid session gets bounced to the login page.</p>
+
+    <div class="dash-row">
+      <span class="dash-label">Email</span>
+      <span class="dash-value" id="userEmail">—</span>
+    </div>
+    <div class="dash-row">
+      <span class="dash-label">User ID</span>
+      <span class="dash-value" id="userId">—</span>
+    </div>
+    <div class="dash-row">
+      <span class="dash-label">Account created</span>
+      <span class="dash-value" id="userCreated">—</span>
+    </div>
+
+    <button class="btn-secondary" id="logoutBtn" style="margin-top: 24px;">Log out</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    // ---- Route guard ----
+    // Every protected page should start with this check.
+    // If there's no active session, send the user to login
+    // before anything else on the page runs.
+    (async () => {
+      const { data } = await supabaseClient.auth.getSession();
+
+      if (!data.session) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      const user = data.session.user;
+      document.getElementById("userEmail").textContent = user.email;
+      document.getElementById("userId").textContent = user.id;
+      document.getElementById("userCreated").textContent = new Date(
+        user.created_at
+      ).toLocaleDateString();
+    })();
+
+    // Keep the page in sync if the session ends elsewhere
+    // (e.g. token expires, or user logs out in another tab).
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        window.location.href = "login.html";
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>
