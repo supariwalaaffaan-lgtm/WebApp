@@ -9,10 +9,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabaseClient.js"></script>
   <script>
-    // Entry point: send the visitor wherever they belong.
+    // Entry point: send the visitor wherever they belong with cache-busted URLs.
     (async () => {
       const { data } = await supabaseClient.auth.getSession();
-      window.location.href = data.session ? "dashboard.html" : "login.html";
+      window.location.href = data.session ? ("dashboard.html?t=" + Date.now()) : ("login.html?t=" + Date.now());
     })();
   </script>
 </body>
