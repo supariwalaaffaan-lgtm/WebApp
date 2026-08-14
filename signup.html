@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Create account</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -27,6 +30,10 @@
         <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
       </div>
       <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="e.g. johndoe" required pattern="[a-zA-Z0-9_-]+" title="Username can only contain letters, numbers, underscores, and hyphens" autocomplete="username" />
+      </div>
+      <div class="field">
         <label for="password">Password</label>
         <input type="password" id="password" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password" />
       </div>
@@ -37,12 +44,19 @@
       <button type="submit" class="btn-primary" id="submitBtn">Create account</button>
     </form>
 
-    <p class="footer-link">Already have an account? <a href="login.html">Log in</a></p>
+    <p class="footer-link">Already have an account? <a href="login.html" onclick="window.location.href='login.html?t='+Date.now(); return false;">Log in</a></p>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabaseClient.js"></script>
   <script>
+    // Force fresh page load if restored from browser back/forward cache
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
     const form = document.getElementById("signupForm");
     const submitBtn = document.getElementById("submitBtn");
     const messageBox = document.getElementById("formMessage");
@@ -56,8 +70,14 @@
       e.preventDefault();
 
       const email = document.getElementById("email").value.trim();
+      const username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value;
       const confirmPassword = document.getElementById("confirmPassword").value;
+
+      if (username.length < 3) {
+        showMessage("Username must be at least 3 characters long.", "error");
+        return;
+      }
 
       if (password !== confirmPassword) {
         showMessage("Those passwords don't match.", "error");
@@ -72,6 +92,9 @@
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
+        options: {
+          data: { username: username }
+        }
       });
 
       submitBtn.disabled = false;
@@ -82,6 +105,23 @@
         document.getElementById("statusText").textContent = "session: locked";
         showMessage(error.message, "error");
         return;
+      }
+
+      // Save username locally so it displays instantly everywhere
+      localStorage.setItem("user_map_" + username.toLowerCase(), email);
+      localStorage.setItem("current_username", username);
+      localStorage.setItem("last_username", username);
+
+      if (data?.user) {
+        try {
+          await supabaseClient.from("profiles").upsert({
+            id: data.user.id,
+            username: username,
+            email: email
+          });
+        } catch (err) {
+          console.warn("Could not sync profile to Supabase database:", err);
+        }
       }
 
       document.getElementById("statusDot").className = "status-dot open";
