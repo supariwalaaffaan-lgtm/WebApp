@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Log in</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -17,14 +20,14 @@
   <div class="card">
     <p class="eyebrow">Welcome back</p>
     <h1>Log in</h1>
-    <p class="subtitle">Enter your email and password to access your account.</p>
+    <p class="subtitle">Enter your username or email and password to access your account.</p>
 
     <div class="message" id="formMessage"></div>
 
     <form id="loginForm">
       <div class="field">
-        <label for="email">Email</label>
-        <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+        <label for="identifier">Username or Email</label>
+        <input type="text" id="identifier" placeholder="username or email@gmail.com" required autocomplete="username" />
       </div>
       <div class="field">
         <label for="password">Password</label>
@@ -34,12 +37,19 @@
     </form>
 
     <p class="footer-link"><a href="reset-password.html">Forgot your password?</a></p>
-    <p class="footer-link">Don't have an account? <a href="signup.html">Sign up</a></p>
+    <p class="footer-link">Don't have an account? <a href="signup.html" onclick="window.location.href='signup.html?t='+Date.now(); return false;">Sign up</a></p>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabaseClient.js"></script>
   <script>
+    // Force fresh page load if restored from browser back/forward cache
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
     const form = document.getElementById("loginForm");
     const submitBtn = document.getElementById("submitBtn");
     const messageBox = document.getElementById("formMessage");
@@ -53,14 +63,14 @@
     (async () => {
       const { data } = await supabaseClient.auth.getSession();
       if (data.session) {
-        window.location.href = "dashboard.html";
+        window.location.href = "dashboard.html?t=" + Date.now();
       }
     })();
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const email = document.getElementById("email").value.trim();
+      const identifier = document.getElementById("identifier").value.trim();
       const password = document.getElementById("password").value;
 
       submitBtn.disabled = true;
@@ -68,8 +78,54 @@
       document.getElementById("statusDot").className = "status-dot pending";
       document.getElementById("statusText").textContent = "session: authenticating";
 
+      let loginEmail = identifier;
+      let matchedUsername = !identifier.includes("@") ? identifier : null;
+
+      // If user typed a username (no @ symbol), resolve to email
+      if (!identifier.includes("@")) {
+        const lowerUser = identifier.toLowerCase();
+        // 1. Try local storage lookup
+        const localEmail = localStorage.getItem("user_map_" + lowerUser);
+
+        if (localEmail) {
+          loginEmail = localEmail;
+        } else {
+          // 2. Fall back to Supabase profiles table lookup
+          try {
+            const { data: profile } = await supabaseClient
+              .from("profiles")
+              .select("email, username")
+              .ilike("username", identifier)
+              .maybeSingle();
+
+            if (profile && profile.email) {
+              loginEmail = profile.email;
+              matchedUsername = profile.username || matchedUsername;
+            } else {
+              submitBtn.disabled = false;
+              submitBtn.textContent = "Log in";
+              document.getElementById("statusDot").className = "status-dot locked";
+              document.getElementById("statusText").textContent = "session: locked";
+              showMessage(
+                "No account found matching that username. Please check your username or try logging in with your email.",
+                "error"
+              );
+              return;
+            }
+          } catch (err) {
+            console.warn("Username lookup error:", err);
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Log in";
+            document.getElementById("statusDot").className = "status-dot locked";
+            document.getElementById("statusText").textContent = "session: locked";
+            showMessage("Could not resolve username. Please try logging in with your email address.", "error");
+            return;
+          }
+        }
+      }
+
       const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email,
+        email: loginEmail,
         password,
       });
 
@@ -82,9 +138,16 @@
         return;
       }
 
+      // Store username locally so dashboard displays it instantly without lag
+      const userMetaName = data?.user?.user_metadata?.username || matchedUsername;
+      if (userMetaName) {
+        localStorage.setItem("current_username", userMetaName);
+        localStorage.setItem("last_username", userMetaName);
+      }
+
       document.getElementById("statusDot").className = "status-dot open";
       document.getElementById("statusText").textContent = "session: authenticated";
-      window.location.href = "dashboard.html";
+      window.location.href = "dashboard.html?t=" + Date.now();
     });
   </script>
 </body>
