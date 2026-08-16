@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Create Account — Rodeo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Header Navigation -->
+  <header class="navbar">
+    <a href="index.html" class="nav-brand">
+      <img src="img/logo.jpg" alt="Logo" class="brand-logo" />
+      <span>RODEO<span class="brand-dot">.</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="login.html" class="nav-link">Log in</a>
+      <a href="signup.html" class="nav-link active accent">Sign up</a>
+      <div class="status-strip">
+        <span class="status-dot locked" id="statusDot"></span>
+        <span id="statusText">locked</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Signup Form Card -->
+  <div class="card">
+    <p class="eyebrow">Get started</p>
+    <h1>Create your account</h1>
+    <p class="subtitle">Join Rodeo with a username, email, and password.</p>
+
+    <div class="message" id="formMessage"></div>
+
+    <form id="signupForm">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="e.g. johndoe" required pattern="[a-zA-Z0-9_-]+" title="Username can only contain letters, numbers, underscores, and hyphens" autocomplete="username" />
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <input type="password" id="password" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password" />
+          <button type="button" class="toggle-pwd" data-target="password" title="Toggle password visibility">
+            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          </button>
+        </div>
+        <div class="strength-meter"><div class="strength-bar" id="strengthBar"></div></div>
+      </div>
+
+      <div class="field">
+        <label for="confirmPassword">Confirm password</label>
+        <div class="input-wrapper">
+          <input type="password" id="confirmPassword" placeholder="Repeat your password" required minlength="8" autocomplete="new-password" />
+          <button type="button" class="toggle-pwd" data-target="confirmPassword" title="Toggle password visibility">
+            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submitBtn">Create account</button>
+    </form>
+
+    <p class="footer-link">Already have an account? <a href="login.html" onclick="window.location.href='login.html?t='+Date.now(); return false;">Log in</a></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    // Force fresh page load if restored from browser back/forward cache
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
+    const form = document.getElementById("signupForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const messageBox = document.getElementById("formMessage");
+    const passwordInput = document.getElementById("password");
+    const strengthBar = document.getElementById("strengthBar");
+
+    // Password strength visual logic
+    passwordInput.addEventListener("input", () => {
+      const val = passwordInput.value;
+      let score = 0;
+      if (val.length >= 8) score += 35;
+      if (/[A-Z]/.test(val)) score += 25;
+      if (/[0-9]/.test(val)) score += 20;
+      if (/[^A-Za-z0-9]/.test(val)) score += 20;
+
+      strengthBar.style.width = score + "%";
+      if (score < 40) strengthBar.style.backgroundColor = "var(--accent-crimson)";
+      else if (score < 75) strengthBar.style.backgroundColor = "var(--accent-amber)";
+      else strengthBar.style.backgroundColor = "var(--accent-emerald)";
+    });
+
+    // Password toggle eye icon
+    document.querySelectorAll(".toggle-pwd").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.getAttribute("data-target");
+        const input = document.getElementById(targetId);
+        if (input.type === "password") {
+          input.type = "text";
+        } else {
+          input.type = "password";
+        }
+      });
+    });
+
+    function showMessage(text, type) {
+      messageBox.textContent = text;
+      messageBox.className = `message show ${type}`;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById("email").value.trim();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const confirmPassword = document.getElementById("confirmPassword").value;
+
+      if (username.length < 3) {
+        showMessage("Username must be at least 3 characters long.", "error");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showMessage("Those passwords don't match.", "error");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Creating account...";
+      document.getElementById("statusDot").className = "status-dot pending";
+      document.getElementById("statusText").textContent = "authenticating";
+
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username: username }
+        }
+      });
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Create account";
+
+      if (error) {
+        document.getElementById("statusDot").className = "status-dot locked";
+        document.getElementById("statusText").textContent = "locked";
+        showMessage(error.message, "error");
+        return;
+      }
+
+      // Save username locally so it displays instantly everywhere
+      localStorage.setItem("user_map_" + username.toLowerCase(), email);
+      localStorage.setItem("current_username", username);
+      localStorage.setItem("last_username", username);
+
+      if (data?.user) {
+        try {
+          await supabaseClient.from("profiles").upsert({
+            id: data.user.id,
+            username: username,
+            email: email
+          });
+        } catch (err) {
+          console.warn("Could not sync profile to Supabase database:", err);
+        }
+      }
+
+      document.getElementById("statusDot").className = "status-dot open";
+      document.getElementById("statusText").textContent = "success";
+      showMessage(
+        "Account created! You can now log in using your email or username.",
+        "success"
+      );
+      form.reset();
+    });
+  </script>
+</body>
+</html>

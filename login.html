@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Log In — Rodeo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Header Navigation -->
+  <header class="navbar">
+    <a href="index.html" class="nav-brand">
+      <img src="img/logo.jpg" alt="Logo" class="brand-logo" />
+      <span>RODEO<span class="brand-dot">.</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="login.html" class="nav-link active accent">Log in</a>
+      <a href="signup.html" class="nav-link">Sign up</a>
+      <div class="status-strip">
+        <span class="status-dot locked" id="statusDot"></span>
+        <span id="statusText">locked</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login Form Card -->
+  <div class="card">
+    <p class="eyebrow">Welcome back</p>
+    <h1>Log in to Rodeo</h1>
+    <p class="subtitle">Enter your username or email and password to access your account.</p>
+
+    <div class="message" id="formMessage"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="identifier">Username or Email</label>
+        <input type="text" id="identifier" placeholder="username or email@gmail.com" required autocomplete="username" />
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <input type="password" id="password" placeholder="Your password" required autocomplete="current-password" />
+          <button type="button" class="toggle-pwd" data-target="password" title="Toggle password visibility">
+            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submitBtn">Log in</button>
+    </form>
+
+    <p class="footer-link"><a href="reset-password.html">Forgot your password?</a></p>
+    <p class="footer-link">Don't have an account? <a href="signup.html" onclick="window.location.href='signup.html?t='+Date.now(); return false;">Sign up</a></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    // Force fresh page load if restored from browser back/forward cache
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
+    // Password toggle eye icon
+    document.querySelectorAll(".toggle-pwd").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.getAttribute("data-target");
+        const input = document.getElementById(targetId);
+        input.type = input.type === "password" ? "text" : "password";
+      });
+    });
+
+    const form = document.getElementById("loginForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const messageBox = document.getElementById("formMessage");
+
+    function showMessage(text, type) {
+      messageBox.textContent = text;
+      messageBox.className = `message show ${type}`;
+    }
+
+    // If password recovery link, route directly to update-password.html
+    (async () => {
+      if (window.location.hash.includes("type=recovery") || window.location.search.includes("type=recovery")) {
+        window.location.href = "update-password.html" + window.location.hash + window.location.search;
+        return;
+      }
+
+      const { data } = await supabaseClient.auth.getSession();
+      if (data.session) {
+        window.location.href = "dashboard.html?t=" + Date.now();
+      }
+    })();
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const identifier = document.getElementById("identifier").value.trim();
+      const password = document.getElementById("password").value;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Logging in...";
+      document.getElementById("statusDot").className = "status-dot pending";
+      document.getElementById("statusText").textContent = "authenticating";
+
+      let loginEmail = identifier;
+      let matchedUsername = !identifier.includes("@") ? identifier : null;
+
+      // If user typed a username (no @ symbol), resolve to email
+      if (!identifier.includes("@")) {
+        const lowerUser = identifier.toLowerCase();
+        // 1. Try local storage lookup
+        const localEmail = localStorage.getItem("user_map_" + lowerUser);
+
+        if (localEmail) {
+          loginEmail = localEmail;
+        } else {
+          // 2. Fall back to Supabase profiles table lookup
+          try {
+            const { data: profile } = await supabaseClient
+              .from("profiles")
+              .select("email, username")
+              .ilike("username", identifier)
+              .maybeSingle();
+
+            if (profile && profile.email) {
+              loginEmail = profile.email;
+              matchedUsername = profile.username || matchedUsername;
+            } else {
+              submitBtn.disabled = false;
+              submitBtn.textContent = "Log in";
+              document.getElementById("statusDot").className = "status-dot locked";
+              document.getElementById("statusText").textContent = "locked";
+              showMessage(
+                "No account found matching that username. Please check your username or try logging in with your email.",
+                "error"
+              );
+              return;
+            }
+          } catch (err) {
+            console.warn("Username lookup error:", err);
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Log in";
+            document.getElementById("statusDot").className = "status-dot locked";
+            document.getElementById("statusText").textContent = "locked";
+            showMessage("Could not resolve username. Please try logging in with your email address.", "error");
+            return;
+          }
+        }
+      }
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: loginEmail,
+        password,
+      });
+
+      if (error) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Log in";
+        document.getElementById("statusDot").className = "status-dot locked";
+        document.getElementById("statusText").textContent = "locked";
+        showMessage(error.message, "error");
+        return;
+      }
+
+      // Store username locally so dashboard displays it instantly without lag
+      const userMetaName = data?.user?.user_metadata?.username || matchedUsername;
+      if (userMetaName) {
+        localStorage.setItem("user_map_" + userMetaName.toLowerCase(), loginEmail);
+        localStorage.setItem("current_username", userMetaName);
+        localStorage.setItem("last_username", userMetaName);
+
+        // Also sync to profiles table in background
+        if (data?.user?.id) {
+          try {
+            supabaseClient.from("profiles").upsert({
+              id: data.user.id,
+              username: userMetaName,
+              email: loginEmail
+            });
+          } catch (e) {
+            console.warn("Profiles auto-sync error:", e);
+          }
+        }
+      }
+
+      document.getElementById("statusDot").className = "status-dot open";
+      document.getElementById("statusText").textContent = "authenticated";
+      window.location.href = "dashboard.html?t=" + Date.now();
+    });
+  </script>
+</body>
+</html>

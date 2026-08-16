@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Dashboard — Rodeo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Header Navigation -->
+  <header class="navbar">
+    <a href="dashboard.html" class="nav-brand">
+      <img src="img/logo.jpg" alt="Logo" class="brand-logo" />
+      <span>RODEO<span class="brand-dot">.</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="dashboard.html" class="nav-link active">Dashboard</a>
+      <a href="reset-password.html" class="nav-link">Security</a>
+      <div class="status-strip">
+        <span class="status-dot open" id="statusDot"></span>
+        <span id="statusText">authenticated</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="dash-container">
+    <!-- User Welcome Hero Card -->
+    <div class="card dash-header-card">
+      <div class="user-badge">
+        <div class="avatar-circle" id="userAvatar">?</div>
+        <div class="user-meta">
+          <h2 id="welcomeText">Welcome back!</h2>
+          <p id="userHandle">@user</p>
+        </div>
+      </div>
+      <div class="dash-actions">
+        <button class="btn-secondary" id="resetPwdBtn">Reset Password</button>
+        <button class="btn-primary" id="logoutBtn">Log Out</button>
+      </div>
+    </div>
+
+    <!-- Stats & Account Information Grid -->
+    <div class="dash-grid">
+      <!-- Username Stat Card -->
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-title">Username</span>
+          <svg class="stat-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+        </div>
+        <div class="stat-value" id="userUsername">—</div>
+        <div class="stat-subtext">Registered Display Name</div>
+      </div>
+
+      <!-- Email Stat Card -->
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-title">Email Address</span>
+          <svg class="stat-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        </div>
+        <div class="stat-value" id="userEmail">—</div>
+        <div class="stat-subtext">Primary Security Email</div>
+      </div>
+
+      <!-- Security Status Stat Card -->
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-title">Session Security</span>
+          <svg class="stat-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+        </div>
+        <div class="stat-value" style="color: var(--accent-emerald);">Protected</div>
+        <div class="stat-subtext" id="userCreated">Created: —</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    // Force fresh page load if restored from browser back/forward cache
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
+    // 1. INSTANT RENDER: Show cached username immediately on load (0ms delay)
+    const cachedUser = localStorage.getItem("current_username") || localStorage.getItem("last_username");
+    if (cachedUser) {
+      updateUserDisplay(cachedUser);
+    }
+
+    function updateUserDisplay(name) {
+      if (!name) return;
+      document.getElementById("userUsername").textContent = name;
+      document.getElementById("welcomeText").textContent = `Welcome back, ${name}!`;
+      document.getElementById("userHandle").textContent = `@${name.toLowerCase()}`;
+      document.getElementById("userAvatar").textContent = name.charAt(0).toUpperCase();
+    }
+
+    // 2. ROUTE GUARD & SESSION VERIFICATION
+    (async () => {
+      // Catch password recovery tokens landing on dashboard
+      if (window.location.hash.includes("type=recovery") || window.location.search.includes("type=recovery")) {
+        window.location.href = "update-password.html" + window.location.hash + window.location.search;
+        return;
+      }
+
+      const { data } = await supabaseClient.auth.getSession();
+
+      if (!data.session) {
+        localStorage.removeItem("current_username");
+        window.location.href = "login.html?t=" + Date.now();
+        return;
+      }
+
+      const user = data.session.user;
+      let username = user.user_metadata?.username || cachedUser;
+
+      if (!username) {
+        try {
+          const { data: profile } = await supabaseClient
+            .from("profiles")
+            .select("username")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (profile?.username) username = profile.username;
+        } catch (e) {
+          console.warn("Could not fetch profile:", e);
+        }
+      }
+
+      if (username) {
+        localStorage.setItem("current_username", username);
+        updateUserDisplay(username);
+      }
+
+      document.getElementById("userEmail").textContent = user.email;
+      document.getElementById("userCreated").textContent = "Created: " + new Date(
+        user.created_at
+      ).toLocaleDateString();
+    })();
+
+    // Keep session in sync
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        localStorage.removeItem("current_username");
+        window.location.href = "login.html?t=" + Date.now();
+      }
+    });
+
+    document.getElementById("resetPwdBtn").addEventListener("click", () => {
+      window.location.href = "reset-password.html?t=" + Date.now();
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabaseClient.auth.signOut();
+      localStorage.removeItem("current_username");
+      window.location.href = "login.html?t=" + Date.now();
+    });
+  </script>
+</body>
+</html>
