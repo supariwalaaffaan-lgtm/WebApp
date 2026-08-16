@@ -112,8 +112,14 @@ body {
   border: 1px solid var(--border-color);
 }
 
-.brand-dot {
+.nav-headline {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   color: var(--accent-crimson);
+  text-transform: uppercase;
+  text-align: center;
 }
 
 .nav-links {
