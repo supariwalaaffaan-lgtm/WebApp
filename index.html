@@ -17,7 +17,7 @@
       }
 
       const { data } = await supabaseClient.auth.getSession();
-      window.location.href = data.session ? ("dashboard.html?t=" + Date.now()) : ("login.html?t=" + Date.now());
+       window.location.href = data.session ? ("dashboard.html?t=" + Date.now()) : ("signup.html?t=" + Date.now());
     })();
   </script>
 </body>
