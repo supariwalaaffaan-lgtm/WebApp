@@ -146,8 +146,22 @@
       // Store username locally so dashboard displays it instantly without lag
       const userMetaName = data?.user?.user_metadata?.username || matchedUsername;
       if (userMetaName) {
+        localStorage.setItem("user_map_" + userMetaName.toLowerCase(), loginEmail);
         localStorage.setItem("current_username", userMetaName);
         localStorage.setItem("last_username", userMetaName);
+
+        // Also sync to profiles table in background
+        if (data?.user?.id) {
+          try {
+            supabaseClient.from("profiles").upsert({
+              id: data.user.id,
+              username: userMetaName,
+              email: loginEmail
+            });
+          } catch (e) {
+            console.warn("Profiles auto-sync background error:", e);
+          }
+        }
       }
 
       document.getElementById("statusDot").className = "status-dot open";
