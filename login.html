@@ -59,8 +59,13 @@
       messageBox.className = `message show ${type}`;
     }
 
-    // If already logged in, skip straight to the dashboard.
+    // If password recovery link, route directly to update-password.html
     (async () => {
+      if (window.location.hash.includes("type=recovery") || window.location.search.includes("type=recovery")) {
+        window.location.href = "update-password.html" + window.location.hash + window.location.search;
+        return;
+      }
+
       const { data } = await supabaseClient.auth.getSession();
       if (data.session) {
         window.location.href = "dashboard.html?t=" + Date.now();
