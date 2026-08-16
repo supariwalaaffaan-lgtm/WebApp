@@ -60,6 +60,12 @@
 
     // 2. ROUTE GUARD & SESSION VERIFICATION
     (async () => {
+      // Catch password recovery tokens landing on dashboard
+      if (window.location.hash.includes("type=recovery") || window.location.search.includes("type=recovery")) {
+        window.location.href = "update-password.html" + window.location.hash + window.location.search;
+        return;
+      }
+
       const { data } = await supabaseClient.auth.getSession();
 
       if (!data.session) {
