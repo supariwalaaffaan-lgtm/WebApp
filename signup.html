@@ -17,7 +17,7 @@
     <a href="index.html" class="nav-brand">
       <img src="img/logo.jpg" alt="Logo" class="brand-logo" />
     </a>
-        <div class="nav-headline">THE FIRST RODEO</div>
+    <div class="nav-headline">THE FIRST RODEO</div>
     <div class="nav-links">
       <a href="login.html" class="nav-link">Log in</a>
       <a href="signup.html" class="nav-link active accent">Sign up</a>
@@ -135,56 +135,3 @@
       if (password !== confirmPassword) {
         showMessage("Those passwords don't match.", "error");
         return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Creating account...";
-      document.getElementById("statusDot").className = "status-dot pending";
-      document.getElementById("statusText").textContent = "authenticating";
-
-      const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { username: username }
-        }
-      });
-
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Create account";
-
-      if (error) {
-        document.getElementById("statusDot").className = "status-dot locked";
-        document.getElementById("statusText").textContent = "locked";
-        showMessage(error.message, "error");
-        return;
-      }
-
-      // Save username locally so it displays instantly everywhere
-      localStorage.setItem("user_map_" + username.toLowerCase(), email);
-      localStorage.setItem("current_username", username);
-      localStorage.setItem("last_username", username);
-
-      if (data?.user) {
-        try {
-          await supabaseClient.from("profiles").upsert({
-            id: data.user.id,
-            username: username,
-            email: email
-          });
-        } catch (err) {
-          console.warn("Could not sync profile to Supabase database:", err);
-        }
-      }
-
-      document.getElementById("statusDot").className = "status-dot open";
-      document.getElementById("statusText").textContent = "success";
-      showMessage(
-        "Account created! You can now log in using your email or username.",
-        "success"
-      );
-      form.reset();
-    });
-  </script>
-</body>
-</html>
