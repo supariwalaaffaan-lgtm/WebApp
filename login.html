@@ -17,7 +17,7 @@
     <a href="index.html" class="nav-brand">
       <img src="img/logo.jpg" alt="Logo" class="brand-logo" />
     </a>
-        <div class="nav-headline">THE FIRST RODEO</div>
+    <div class="nav-headline">THE FIRST RODEO</div>
     <div class="nav-links">
       <a href="login.html" class="nav-link active accent">Log in</a>
       <a href="signup.html" class="nav-link">Sign up</a>
@@ -104,8 +104,6 @@
 
       submitBtn.disabled = true;
       submitBtn.textContent = "Logging in...";
-      document.getElementById("statusDot").className = "status-dot pending";
-      document.getElementById("statusText").textContent = "authenticating";
 
       let loginEmail = identifier;
       let matchedUsername = !identifier.includes("@") ? identifier : null;
@@ -133,8 +131,6 @@
             } else {
               submitBtn.disabled = false;
               submitBtn.textContent = "Log in";
-              document.getElementById("statusDot").className = "status-dot locked";
-              document.getElementById("statusText").textContent = "locked";
               showMessage(
                 "No account found matching that username. Please check your username or try logging in with your email.",
                 "error"
@@ -145,8 +141,6 @@
             console.warn("Username lookup error:", err);
             submitBtn.disabled = false;
             submitBtn.textContent = "Log in";
-            document.getElementById("statusDot").className = "status-dot locked";
-            document.getElementById("statusText").textContent = "locked";
             showMessage("Could not resolve username. Please try logging in with your email address.", "error");
             return;
           }
@@ -161,8 +155,6 @@
       if (error) {
         submitBtn.disabled = false;
         submitBtn.textContent = "Log in";
-        document.getElementById("statusDot").className = "status-dot locked";
-        document.getElementById("statusText").textContent = "locked";
         showMessage(error.message, "error");
         return;
       }
@@ -188,8 +180,6 @@
         }
       }
 
-      document.getElementById("statusDot").className = "status-dot open";
-      document.getElementById("statusText").textContent = "authenticated";
       window.location.href = "dashboard.html?t=" + Date.now();
     });
   </script>
