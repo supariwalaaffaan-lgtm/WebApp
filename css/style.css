@@ -295,35 +295,27 @@ input::placeholder {
 /* Password Toggle Icon */
 .toggle-pwd {
   position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  height: 100%;
-  padding-left: 12px;
-  padding-right: 14px;
-  background: transparent;
+  right: 12px;
+  background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: color 0.15s ease;
-  z-index: 10;
-  outline: none;
-  -webkit-tap-highlight-color: transparent;
+  width: auto;
 }
 
-.toggle-pwd:hover,
-.toggle-pwd.active {
-  color: var(--accent-crimson);
+.toggle-pwd:hover {
+  color: var(--text-primary);
 }
 
 .toggle-pwd svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   fill: currentColor;
-  pointer-events: none;
 }
 
 /* Password Strength Indicator */
